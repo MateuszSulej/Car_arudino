@@ -1,0 +1,121 @@
+#include<Servo.h>
+const short RIGHT_MOTORpin = 6;
+const short LEFT_MOTORpin = 11;
+const short TRIGpin = 2;
+const short ECHOpin = 3;
+
+Servo SERVOpin;
+int array[6] = {0};
+
+short maxDistancePosition = 0;
+int maxDistanceValue = 0;
+
+void setup()
+{
+  	Serial.begin(9600);
+  	SERVOpin.attach(9);
+	pinMode(LEFT_MOTORpin,OUTPUT);
+  	pinMode(RIGHT_MOTORpin,OUTPUT);
+}
+
+void loop()
+{  	
+	functionToRobotWork();
+  	delay(600);
+}
+
+void functionToRobotWork(){
+  int speedValue = speed(distance());
+  if(speedValue == 0){
+    stopMove();
+    servoCheckDistnce();
+    maxDistance();
+   	 if(isAtLeft(maxDistancePosition)){
+       do{
+			turnRight();
+       	}while(!isGoodAngle());
+     }else{
+       do{
+			turnLeft();
+       	}while(!isGoodAngle());
+     }    
+  }else{
+   	forwardMove(speedValue);
+  }
+  Serial.println(speedValue);
+}
+
+bool isGoodAngle(){
+  int distanceValue = distance();
+  int minusDevitation = maxDistanceValue - maxDistanceValue*0.1;
+    	
+  if(distanceValue>=minusDevitation || distanceValue>=200)
+    return true;
+  return false;
+}
+void turnLeft(){
+	analogWrite(RIGHT_MOTORpin,120);
+}
+void turnRight(){
+	analogWrite(LEFT_MOTORpin,120);
+}
+void stopMove(){
+ 	analogWrite(RIGHT_MOTORpin,0);
+   	analogWrite(LEFT_MOTORpin,0);
+}
+void forwardMove(int speed){
+  	analogWrite(LEFT_MOTORpin,speed);
+   	analogWrite(RIGHT_MOTORpin,speed);
+}
+bool isAtLeft(int position){
+	if(position<3)
+      return true;
+  	return false;
+}
+void maxDistance(){
+  for(short i = 0;i<6;i++){
+    if(maxDistanceValue<array[i]){
+    	maxDistanceValue = array[i];
+      	maxDistancePosition = i;
+    }
+  }
+}
+void servoCheckDistnce(){
+	SERVOpin.write(180);  
+ 	delay(1500);
+  	int j = 0;
+  	for(int i=180;i>=0;i-=30){
+    	SERVOpin.write(i); 
+      	array[j++] = meanOf5();
+    	delay(700);
+  	}
+  	SERVOpin.write(70);  
+}
+int meanOf5(){
+  int value = 0;
+  for(short i=0;i<5;i++){
+  	value+=distance();
+  }
+  return value/5;
+}
+int speed(int distance){
+  	int value = map(distance,50,300,150,255);
+	if(distance<50)
+      	return 0;
+  	else if(distance>255)
+      	return 255;
+  	else
+  		return value;
+}
+int distance(){
+ 	pinMode(TRIGpin,OUTPUT);
+  	pinMode(ECHOpin,INPUT);
+  
+    digitalWrite(TRIGpin,LOW);
+   	delay(50);
+   	digitalWrite(TRIGpin,HIGH);
+  	delay(10);
+    digitalWrite(TRIGpin,LOW);
+ 
+ 	return pulseIn(ECHOpin,HIGH)/57.5;
+}
